@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RUST — Полный гайд по оптимизации FPS и стабильности 2026</title>
+<style>
+:root{--bg:#0b0d10;--card:#14181d;--card2:#101419;--text:#f2f4f7;--muted:#aab2bd;--accent:#ff7a18;--accent2:#ffb15c;--border:#2a3038}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#090b0e,#11151a);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;line-height:1.65}
+.container{max-width:1050px;margin:auto;padding:34px 20px 70px}.hero{padding:55px 35px;border:1px solid var(--border);border-radius:24px;background:radial-gradient(circle at top right,rgba(255,122,24,.22),transparent 35%),var(--card);box-shadow:0 20px 70px rgba(0,0,0,.35)}
+.kicker{color:var(--accent2);font-weight:800;letter-spacing:.12em;text-transform:uppercase}h1{font-size:clamp(36px,7vw,68px);line-height:1;margin:12px 0}h2{margin-top:48px;font-size:30px;border-bottom:1px solid var(--border);padding-bottom:10px}h3{margin-top:28px;color:var(--accent2)}
+p,li{color:#d7dce2}.subtitle{font-size:19px;color:var(--muted);max-width:780px}.warning{margin-top:28px;padding:22px;border:2px solid #ff5c5c;border-radius:16px;background:rgba(255,70,70,.08)}.warning strong{color:#ff7777;font-size:18px}
+.card{margin:20px 0;padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--card)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.tag{display:inline-block;padding:5px 10px;border-radius:999px;background:#252b33;color:var(--accent2);font-size:13px;font-weight:700}
+table{width:100%;border-collapse:collapse;margin:18px 0;background:var(--card)}th,td{padding:12px 14px;border:1px solid var(--border);text-align:left;vertical-align:top}th{background:#20262e;color:var(--accent2)}
+code{background:#080a0d;border:1px solid var(--border);padding:3px 7px;border-radius:6px;color:#ffd29e}pre{background:#080a0d;border:1px solid var(--border);padding:16px;border-radius:12px;overflow:auto;color:#ffd29e}
+ol li{margin:8px 0}.footer{margin-top:55px;color:var(--muted);font-size:13px;text-align:center}
+@media print{body{background:white;color:#111}.hero,.card,table,.warning{box-shadow:none;background:white;border-color:#bbb}p,li{color:#222}h1,h2,h3{color:#111}.warning{border-color:#c33}}
+</style>
+</head>
+<body><div class="container">
+
+<section class="hero">
+<div class="kicker">RUST • 2026</div>
+<h1>Полный гайд по оптимизации</h1>
+<p class="subtitle">FPS, frametime, графика, Windows, NVIDIA/AMD, RAM, CPU, GPU, SSD и диагностика микрофризов.</p>
+<div class="warning">
+<strong>⚠ ВАЖНО ПЕРЕД ПОКУПКОЙ</strong>
+<p><b>ГАЙД НЕ ГАРАНТИРУЕТ И НЕ ОБЕСПЕЧИВАЕТ КОНКРЕТНЫЙ ПРИРОСТ FPS.</b></p>
+<p>Производительность Rust зависит от процессора, видеокарты, оперативной памяти, разрешения, температур компонентов, сервера и конкретной игровой ситуации.</p>
+<p>Вы покупаете <b>ИНСТРУКЦИЮ ПО ОПТИМИЗАЦИИ</b>, а не гарантированный прирост производительности.</p>
+</div></section>
+
+<h2>1. Что внутри</h2>
+<div class="grid">
+<div class="card"><span class="tag">RUST</span><h3>Настройки графики</h3><p>Draw Distance, Object Quality, LOD, тени, вода, трава, декор, шейдеры, сглаживание, постобработка и апскейлинг.</p></div>
+<div class="card"><span class="tag">ПРОФИЛИ</span><h3>Готовые профили</h3><p>Пресеты для слабых, средних и мощных ПК.</p></div>
+<div class="card"><span class="tag">WINDOWS</span><h3>Оптимизация системы</h3><p>Питание, фоновые процессы, оверлеи, SSD и температуры.</p></div>
+<div class="card"><span class="tag">GPU</span><h3>NVIDIA / AMD</h3><p>Настройки драйверов, производительность и диагностика упора в видеокарту.</p></div>
+<div class="card"><span class="tag">ДИАГНОСТИКА</span><h3>FPS и Frametime</h3><p>CPU/GPU bottleneck, микрофризы, просадки на базах, Outpost и при загрузке мира.</p></div>
+<div class="card"><span class="tag">ЖЕЛЕЗО</span><h3>RAM / CPU / GPU / SSD</h3><p>Как определить слабое место системы, проверить температуры и thermal throttling.</p></div>
+</div>
+
+<h2>2. Быстрый профиль для большинства ПК</h2>
+<table><tr><th>Параметр</th><th>Стартовое значение</th><th>Зачем</th></tr>
+<tr><td>Режим экрана</td><td>Fullscreen</td><td>Хорошая отправная точка для стабильной подачи кадров.</td></tr>
+<tr><td>VSync</td><td>Off</td><td>Не добавлять принудительную синхронизацию при тестировании.</td></tr>
+<tr><td>FPS Limit</td><td>0 / Unlimited для теста</td><td>Сначала определить реальный потолок FPS.</td></tr>
+<tr><td>FOV</td><td>90</td><td>Сбалансированное стартовое значение.</td></tr>
+<tr><td>Graphics Quality</td><td>1–3</td><td>Базовый профиль с последующей ручной настройкой.</td></tr>
+<tr><td>Shadow Quality</td><td>Low</td><td>Снижает стоимость отрисовки теней.</td></tr>
+<tr><td>Max Shadow Lights</td><td>1</td><td>Ограничивает нагрузку от источников теней.</td></tr>
+<tr><td>Water Quality</td><td>0–1</td><td>Полезно для сцен возле воды.</td></tr>
+<tr><td>Water Reflections</td><td>0</td><td>Снижает обработку отражений.</td></tr>
+<tr><td>Grass / Decor</td><td>0</td><td>Снижает количество мелких объектов.</td></tr>
+<tr><td>Motion Blur / Bloom</td><td>Off</td><td>Чище изображение и меньше постобработки.</td></tr>
+<tr><td>Ambient Occlusion</td><td>Off</td><td>Снижает дополнительную обработку освещения.</td></tr>
+<tr><td>Depth of Field / Lens Dirt / Sun Shafts</td><td>Off</td><td>Необязательные визуальные эффекты.</td></tr>
+<tr><td>Draw Distance</td><td>1500–2000</td><td>Баланс видимости и нагрузки CPU/GPU.</td></tr></table>
+
+<h2>3. Определи, во что упирается ПК</h2>
+<table><tr><th>Признак</th><th>Вероятная причина</th><th>Что проверить первым</th></tr>
+<tr><td>GPU 95–99%</td><td>Упор в GPU</td><td>Разрешение, Render Scale, тени и эффекты.</td></tr>
+<tr><td>GPU 50–80%, CPU сильно загружен</td><td>Упор в CPU</td><td>Draw Distance, Object Quality, LOD, тени и фоновые процессы.</td></tr>
+<tr><td>Средний FPS хороший, но есть рывки</td><td>Frametime / RAM / CPU / загрузка</td><td>RAM, SSD, фоновые программы и polling rate мыши.</td></tr>
+<tr><td>FPS падает на больших базах</td><td>Много объектов/игроков</td><td>Object Quality, LOD, Draw Distance и тени.</td></tr>
+<tr><td>Ноутбук замедляется после игры</td><td>Температурные/энергетические лимиты</td><td>Температуры, режим питания и охлаждение.</td></tr></table>
+
+<h2>4. Измерение результата</h2>
+<ol>
+<li>Запиши разрешение, средний FPS и субъективную плавность.</li>
+<li>Тестируй один и тот же сервер и желательно одну и ту же локацию 60–120 секунд.</li>
+<li>Проверь три сценария: открытая местность, база/монумент и загруженная зона.</li>
+<li>Меняй одну группу настроек за раз.</li>
+<li>Сравнивай не только средний FPS, но и плавность/frametime.</li>
+</ol>
+<h3>Полезные команды Rust</h3>
+<pre>fps
+fps.limit 0
+perf 2</pre>
+<p><b>Совет:</b> после оптимизации можно ограничить FPS немного ниже стабильного максимума, чтобы уменьшить скачки нагрузки.</p>
+
+<h2>5. Оптимизация графики</h2>
+<h3>Draw Distance</h3><p>Одна из первых настроек, которую стоит проверить при CPU bottleneck. Начни с 1500–2000 и повышай, если есть запас производительности.</p>
+<h3>Object Quality и LOD</h3><p>Влияют на детализацию и сложность сцены. При просадках возле баз, монументов и поселений тестируй их до агрессивного снижения текстур.</p>
+<h3>Тени</h3><p>Для производительного профиля: Shadow Quality Low, Max Shadow Lights 1, Contact Shadows Off. Если есть запас — повышай качество постепенно.</p>
+<h3>Вода</h3><p>Water Quality и Water Reflections особенно заметны возле воды. Начни с низких значений и повышай их только при наличии запаса GPU.</p>
+<h3>Grass и Decor</h3><p>Низкие значения уменьшают стоимость большого количества мелких объектов и визуального мусора.</p>
+<h3>Shader / Terrain / Tree</h3><p>Не обязательно ставить всё в минимум. Для среднего ПК можно начать примерно с Shader 200, Terrain 50 и Tree 50.</p>
+<h3>Постобработка</h3><p>Для чистой соревновательной картинки отключи Motion Blur, Bloom, Depth of Field, Lens Dirt, Sun Shafts и Ambient Occlusion. Сглаживание выбирай по качеству изображения.</p>
+<h3>Upscaling</h3><p>Если доступен DLSS или другой поддерживаемый апскейлер, начни с Quality. Balanced имеет смысл при реальном упоре в GPU. При CPU bottleneck прирост может быть небольшим.</p>
+
+<h2>6. Три готовых профиля</h2>
+<div class="card"><h3>🔴 Слабый ПК</h3>
+<table><tr><th>Параметр</th><th>Значение</th></tr>
+<tr><td>Разрешение</td><td>Родное или 1600×900 / 1280×720 при необходимости</td></tr><tr><td>Fullscreen</td><td>On</td></tr><tr><td>VSync</td><td>Off</td></tr><tr><td>FOV</td><td>90</td></tr><tr><td>Graphics Quality</td><td>1</td></tr><tr><td>Shadow Quality / Lights</td><td>Low / 1</td></tr><tr><td>Water / Reflections</td><td>0 / 0</td></tr><tr><td>Shader Level</td><td>100</td></tr><tr><td>Draw Distance</td><td>1500</td></tr><tr><td>Grass / Decor</td><td>0 / 0</td></tr><tr><td>Tree / Terrain</td><td>25 / 25</td></tr><tr><td>Object Quality</td><td>50</td></tr><tr><td>Particle Quality</td><td>0</td></tr></table></div>
+
+<div class="card"><h3>🟡 Средний ПК — рекомендуемый старт</h3>
+<table><tr><th>Параметр</th><th>Значение</th></tr>
+<tr><td>Разрешение</td><td>Родное</td></tr><tr><td>Fullscreen / VSync</td><td>On / Off</td></tr><tr><td>FOV</td><td>90</td></tr><tr><td>Graphics Quality</td><td>2</td></tr><tr><td>Shadow Quality / Lights</td><td>Low / 1</td></tr><tr><td>Water / Reflections</td><td>0 / 0</td></tr><tr><td>Shader Level</td><td>200</td></tr><tr><td>Draw Distance</td><td>1800</td></tr><tr><td>Shadow Distance</td><td>100</td></tr><tr><td>Anisotropic Filtering</td><td>4</td></tr><tr><td>Parallax Mapping</td><td>0</td></tr><tr><td>Grass / Decor</td><td>0 / 0</td></tr><tr><td>Tree / Terrain</td><td>50 / 50</td></tr><tr><td>Object Quality</td><td>100</td></tr><tr><td>Particle Quality</td><td>10</td></tr></table></div>
+
+<div class="card"><h3>🟢 Мощный ПК</h3>
+<table><tr><th>Параметр</th><th>Значение</th></tr>
+<tr><td>Разрешение</td><td>Родное</td></tr><tr><td>Fullscreen / VSync</td><td>On / Off</td></tr><tr><td>FOV</td><td>90</td></tr><tr><td>Graphics Quality</td><td>4–6</td></tr><tr><td>Shadow Quality / Lights</td><td>Medium/High / 1–2</td></tr><tr><td>Water / Reflections</td><td>1–2 / 1</td></tr><tr><td>Shader Level</td><td>350–450</td></tr><tr><td>Draw Distance</td><td>2000+</td></tr><tr><td>Shadow Distance</td><td>100–150</td></tr><tr><td>Anisotropic Filtering</td><td>4–8</td></tr><tr><td>Grass / Decor</td><td>0–25 / 0–25</td></tr><tr><td>Tree / Terrain</td><td>50–75 / 50–75</td></tr><tr><td>Object Quality</td><td>100–150</td></tr></table></div>
+
+<h2>7. Windows — что действительно стоит сделать</h2>
+<ul>
+<li>Установи актуальный стабильный драйвер GPU.</li>
+<li>Используй подходящий режим питания; на ноутбуке тестируй от сети.</li>
+<li>Закрывай тяжёлые фоновые приложения перед запуском Rust.</li>
+<li>Оставляй достаточно свободной RAM и места на SSD.</li>
+<li>Отключай ненужные оверлеи, если они вызывают скачки frametime.</li>
+<li>Не используй случайные «debloat» и registry FPS packs.</li>
+<li>Проверь температуры CPU/GPU под нагрузкой.</li>
+<li>На ноутбуке убедись, что Rust использует дискретную GPU.</li>
+</ul>
+
+<h2>8. NVIDIA / AMD</h2>
+<h3>NVIDIA</h3><ul><li>Используй актуальный стабильный драйвер.</li><li>Не навязывай агрессивные фильтры драйвера до тестирования настроек самой игры.</li><li>Используй поддерживаемые функции снижения задержки вместо одновременного применения множества низкоуровневых твиков.</li></ul>
+<h3>AMD</h3><ul><li>Используй актуальный Adrenalin.</li><li>При необходимости протестируй поддерживаемые функции Anti-Lag.</li><li>Меняй по одной функции драйвера за раз.</li></ul>
+
+<h2>9. Polling Rate мыши</h2>
+<div class="warning"><strong>⚠ ВЫСОКАЯ ЧАСТОТА ОПРОСА МОЖЕТ ИМЕТЬ ЗНАЧЕНИЕ</strong>
+<p>Facepunch предупреждала о проблемах производительности на некоторых системах с высокой частотой опроса мыши после перехода на Unity 6. Если используется 2000/4000/8000 Hz и появились микрофризы или необычно высокая нагрузка CPU, полезно временно проверить значение ниже 1000 Hz.</p>
+<p>Это <b>не означает</b>, что высокая частота опроса всегда плоха. Это диагностический шаг для проблемной конфигурации.</p></div>
+
+<h2>10. RAM, CPU, GPU и SSD</h2>
+<table><tr><th>Компонент</th><th>Что проверить</th><th>Что делать</th></tr>
+<tr><td>RAM</td><td>Объём и частоту</td><td>Закрыть тяжёлые приложения; включить XMP/EXPO, если система стабильна.</td></tr>
+<tr><td>CPU</td><td>Загрузку, частоты, температуру</td><td>Проверить throttling; мощная GPU не решит CPU bottleneck.</td></tr>
+<tr><td>GPU</td><td>Загрузку, VRAM, температуру</td><td>Снижать разрешение/эффекты только при реальном упоре в GPU.</td></tr>
+<tr><td>SSD</td><td>Свободное место и состояние</td><td>Держать Rust на нормальном SSD с достаточным свободным местом.</td></tr>
+<tr><td>Охлаждение</td><td>Температуры CPU/GPU</td><td>Проверить airflow, чистоту и режим питания ноутбука.</td></tr></table>
+
+<h2>11. GC Buffer и экспериментальные твики</h2>
+<p>В сообществе часто советуют менять <code>gc.buffer</code>, но это не универсальный FPS boost. Рассматривай его как эксперимент после базовой оптимизации.</p>
+<pre>gc.buffer 4096</pre>
+<p>Если фризы становятся реже, но длиннее — верни значение обратно и снова сравни frametime.</p>
+
+<h2>12. Steam Launch Options</h2>
+<p>Не вставляй большие списки старых launch options из случайных видео. Многие параметры устарели или не дают измеримой пользы. Начни с пустого поля Launch Options и тестируй только конкретный параметр, если понимаешь, зачем он нужен.</p>
+
+<h2>13. Если FPS всё ещё низкий</h2>
+<table><tr><th>Проблема</th><th>Порядок действий</th></tr>
+<tr><td>Низкий FPS везде</td><td>Проверить bottleneck → Draw Distance/Object/Shadow → разрешение → температуры.</td></tr>
+<tr><td>Низкий FPS только на базе</td><td>Object Quality → LOD → Draw Distance → тени → оценить количество объектов.</td></tr>
+<tr><td>Низкий FPS в Outpost/городах</td><td>Вероятнее CPU bottleneck; проверить объекты/дальность/тени и фоновые процессы.</td></tr>
+<tr><td>Микрофризы при движении</td><td>SSD → RAM → фоновые приложения → polling rate → frametime.</td></tr>
+<tr><td>Фризы при появлении игроков</td><td>Проверить CPU и polling rate; сравнить frametime.</td></tr>
+<tr><td>FPS упал после обновления</td><td>Сбросить графику → проверить драйвер → повторить тот же тест → проверить свежие патчноуты.</td></tr>
+<tr><td>GPU загружена слабо</td><td>Не снижать разрешение первым делом; искать CPU bottleneck.</td></tr>
+<tr><td>Ноутбук замедляется через 10–20 минут</td><td>Температура → режим питания → частоты CPU/GPU → охлаждение.</td></tr></table>
+
+<h2>14. Финальный алгоритм оптимизации</h2>
+<div class="card">
+<ol>
+<li><b>Зафиксируй базовый результат.</b> Запиши разрешение, FPS и условия теста.</li>
+<li><b>Определи bottleneck.</b> Посмотри загрузку CPU/GPU, температуры и frametime.</li>
+<li><b>Настрой Rust.</b> Начни с Draw Distance, Object Quality, теней, воды, Grass/Decor и постэффектов.</li>
+<li><b>Выбери профиль.</b> Используй пресет для слабого, среднего или мощного ПК как стартовую точку.</li>
+<li><b>Проверь Windows.</b> Убери тяжёлые фоновые процессы и ненужные оверлеи.</li>
+<li><b>Проверь драйвер.</b> Установи стабильный актуальный драйвер NVIDIA или AMD.</li>
+<li><b>Проверь температуры.</b> Убедись, что CPU/GPU не теряют частоты из-за перегрева.</li>
+<li><b>Проверь RAM и SSD.</b> Особенно если проблема выражается в микрофризах и подгрузках.</li>
+<li><b>Проверь polling rate.</b> Если используется 1000+ Hz и есть микрофризы, временно протестируй более низкое значение.</li>
+<li><b>Повтори тест.</b> Сравни FPS и frametime в тех же условиях.</li>
+<li><b>Не гонись за цифрой.</b> Если картинка стала хуже, а прирост минимален — верни предыдущую настройку.</li>
+</ol>
+</div>
+
+<div class="footer">
+RUST Optimization Guide • 2026<br>
+Гайд не гарантирует конкретный прирост FPS. Результат зависит от железа, сервера и игровой ситуации.
+</div>
+</div></body></html>
